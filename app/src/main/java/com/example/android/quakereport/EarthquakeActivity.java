@@ -24,6 +24,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -37,6 +38,8 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.earthquake_activity);
+
+        listSetup(new ArrayList<Earthquake>());
 
         FetchData task = new FetchData();
         task.execute(FETCH_URL);
@@ -72,9 +75,16 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
         }
 
         @Override
-        protected void onPostExecute(List<Earthquake> earthquakes) {
-            // Find a reference to the {@link ListView} in the layout
-            if (earthquakes != null) listSetup(earthquakes);
+        protected void onPostExecute(List<Earthquake> data) {
+
+            // Clear the adapter of previous earthquake data
+            adapter.clear();
+
+            // If there is a valid list of {@link Earthquake}s, then add them to the adapter's
+            // data set. This will trigger the ListView to update.
+            if (data != null && !data.isEmpty()) {
+                adapter.addAll(data);
+            }
         }
     }
 }
