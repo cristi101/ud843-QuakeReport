@@ -15,41 +15,66 @@
  */
 package com.example.android.quakereport;
 
+import android.content.Intent;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.widget.ArrayAdapter;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
-import java.util.ArrayList;
+import java.util.List;
 
-public class EarthquakeActivity extends AppCompatActivity {
+
+public class EarthquakeActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
+    private static final String FETCH_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&eventtype=earthquake&orderby=time&minmag=6&limit=10";
 
+    private EarthquakeAdapter adapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.earthquake_activity);
 
-        // Create a fake list of earthquake locations.
-        ArrayList<String> earthquakes = new ArrayList<>();
-        earthquakes.add("San Francisco");
-        earthquakes.add("London");
-        earthquakes.add("Tokyo");
-        earthquakes.add("Mexico City");
-        earthquakes.add("Moscow");
-        earthquakes.add("Rio de Janeiro");
-        earthquakes.add("Paris");
+        FetchData task = new FetchData();
+        task.execute(FETCH_URL);
+    }
 
-        // Find a reference to the {@link ListView} in the layout
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Uri uri = Uri.parse(adapter.getItem(position).getUrl());
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivity(intent);
+        }
+    }
+
+    private void listSetup(List<Earthquake> earthquakes) {
         ListView earthquakeListView = (ListView) findViewById(R.id.list);
 
         // Create a new {@link ArrayAdapter} of earthquakes
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-                this, android.R.layout.simple_list_item_1, earthquakes);
+        adapter = new EarthquakeAdapter(this, earthquakes);
 
         // Set the adapter on the {@link ListView}
         // so the list can be populated in the user interface
         earthquakeListView.setAdapter(adapter);
+        earthquakeListView.setOnItemClickListener(this);
+    }
+
+    private class FetchData extends AsyncTask<String, Void, List<Earthquake>> {
+
+        @Override
+        protected List<Earthquake> doInBackground(String... urls) {
+            if (urls.length < 1 || urls[0] == null || urls[0].length() == 0) return null;
+            return QueryUtils.extractEarthquakes(urls[0]);
+        }
+
+        @Override
+        protected void onPostExecute(List<Earthquake> earthquakes) {
+            // Find a reference to the {@link ListView} in the layout
+            if (earthquakes != null) listSetup(earthquakes);
+        }
     }
 }
