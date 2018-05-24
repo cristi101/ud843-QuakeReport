@@ -27,6 +27,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,12 +37,14 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
 
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
     private static final String FETCH_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&eventtype=earthquake&orderby=time&minmag=6&limit=10";
+    private TextView mEmptyStateView;
 
     private EarthquakeAdapter adapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.earthquake_activity);
+        mEmptyStateView = findViewById(R.id.empty_view);
 
         listSetup(new ArrayList<Earthquake>());
 
@@ -60,7 +63,7 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
 
     private void listSetup(List<Earthquake> earthquakes) {
         ListView earthquakeListView = (ListView) findViewById(R.id.list);
-
+        earthquakeListView.setEmptyView(mEmptyStateView);
         // Create a new {@link ArrayAdapter} of earthquakes
         adapter = new EarthquakeAdapter(this, earthquakes);
 
@@ -80,6 +83,7 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
 
     @Override
     public void onLoadFinished(Loader<List<Earthquake>> loader, List<Earthquake> data) {
+        mEmptyStateView.setText(R.string.no_earthquakes);
         // Clear the adapter of previous earthquake data
         adapter.clear();
 
