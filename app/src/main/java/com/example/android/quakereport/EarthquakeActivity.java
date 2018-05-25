@@ -17,13 +17,20 @@ package com.example.android.quakereport;
 
 
 import android.app.LoaderManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
+import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -37,7 +44,7 @@ import java.util.List;
 public class EarthquakeActivity extends AppCompatActivity implements AdapterView.OnItemClickListener, LoaderManager.LoaderCallbacks<List<Earthquake>> {
 
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
-    private static final String FETCH_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&eventtype=earthquake&orderby=time&minmag=6&limit=10";
+    private static final String FETCH_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query";
     private TextView mEmptyStateView;
     private ProgressBar mProgress;
     private EarthquakeAdapter adapter;
@@ -50,8 +57,39 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
 
         listSetup(new ArrayList<Earthquake>());
 
-        Loader<List<Earthquake>> loader = getLoaderManager().initLoader(0, null, this);
+        if (hasNetwork()) getLoaderManager().initLoader(0, null, this);
+        else {
+            mProgress.setVisibility(View.GONE);
+            mEmptyStateView.setText(R.string.no_internet);
+        }
 
+
+    }
+
+    @Override
+    // This method initialize the contents of the Activity's options menu.
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the Options Menu we specified in XML
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_settings) {
+            Intent settingsIntent = new Intent(this, SettingsActivity.class);
+            startActivity(settingsIntent);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    boolean hasNetwork() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 
     @Override
@@ -79,7 +117,30 @@ public class EarthquakeActivity extends AppCompatActivity implements AdapterView
     @NonNull
     @Override
     public Loader<List<Earthquake>> onCreateLoader(int id, @Nullable Bundle args) {
-        return new EarthquakeLoader(getApplicationContext(), FETCH_URL);
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        // getString retrieves a String value from the preferences. The second parameter is the default value for this preference.
+        String minMagnitude = sharedPrefs.getString(
+                getString(R.string.settings_min_magnitude_key),
+                getString(R.string.settings_min_magnitude_default));
+
+        String orderBy = sharedPrefs.getString(
+                getString(R.string.settings_order_by_key),
+                getString(R.string.settings_order_by_default)
+        );
+
+        // parse breaks apart the URI string that's passed into its parameter
+        Uri baseUri = Uri.parse(FETCH_URL);
+
+        // buildUpon prepares the baseUri that we just parsed so we can add query parameters to it
+        Uri.Builder uriBuilder = baseUri.buildUpon();
+
+        // Append query parameter and its value. For example, the `format=geojson`
+        uriBuilder.appendQueryParameter("format", "geojson");
+        uriBuilder.appendQueryParameter("limit", "10");
+        uriBuilder.appendQueryParameter("minmag", minMagnitude);
+        uriBuilder.appendQueryParameter("orderby", orderBy);
+        return new EarthquakeLoader(getApplicationContext(), uriBuilder.toString());
     }
 
 
